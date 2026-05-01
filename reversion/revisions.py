@@ -21,6 +21,7 @@ _VersionOptions = namedtuple("VersionOptions", (
     "for_concrete_model",
     "ignore_duplicates",
     "use_natural_foreign_keys",
+    "object_id_field"
 ))
 
 
@@ -168,7 +169,11 @@ def _add_to_revision(obj, using, model_db, explicit):
         return
     version_options = _get_options(obj.__class__)
     content_type = _get_content_type(obj.__class__, using)
-    object_id = force_str(obj.pk)
+    if version_options.object_id_field:
+        custom_object_id = version_options.object_id_field
+        object_id = force_str(obj[custom_object_id])
+    else:
+        object_id = force_str(obj.pk) 
     version_key = (content_type, object_id)
     # If the obj is already in the revision, stop now.
     db_versions = _current_frame().db_versions
@@ -376,7 +381,7 @@ def _get_senders_and_signals(model):
 
 
 def register(model=None, fields=None, exclude=(), follow=(), format="json",
-             for_concrete_model=True, ignore_duplicates=False, use_natural_foreign_keys=False):
+             for_concrete_model=True, ignore_duplicates=False, use_natural_foreign_keys=False, object_id_field=None):
     def register(model):
         # Prevent multiple registration.
         if is_registered(model):
@@ -401,6 +406,7 @@ def register(model=None, fields=None, exclude=(), follow=(), format="json",
             for_concrete_model=for_concrete_model,
             ignore_duplicates=ignore_duplicates,
             use_natural_foreign_keys=use_natural_foreign_keys,
+            object_id_field=object_id_field,
         )
         # Register the model.
         _registered_models[_get_registration_key(model)] = version_options
